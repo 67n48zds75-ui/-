@@ -1,0 +1,37 @@
+{
+  "time_utc": "2026-11-16T10:30:36.953496+00:00",
+  "checks": {
+    "root": {
+      "url": "https://67n48zds75-ui.github.io/",
+      "http": 200,
+      "robots": [
+        "noindex, follow"
+      ],
+      "canonical": []
+    },
+    "robots": {
+      "url": "https://67n48zds75-ui.github.io/robots.txt",
+      "http": 200
+    },
+    "app": {
+      "url": "https://67n48zds75-ui.github.io/-/",
+      "http": 200,
+      "robots": [
+        "index, follow, max-image-preview:large"
+      ],
+      "canonical": [
+        "https://67n48zds75-ui.github.io/-/"
+      ]
+    },
+    "google": {
+      "url": "https://67n48zds75-ui.github.io/-/google9ff3531209049db0.html",
+      "http": 200
+    }
+  },
+  "yandex_root_file": {
+    "url": "https://67n48zds75-ui.github.io/yandex_941d9b9efc6d3bde.html",
+    "http": 200,
+    "body_exact_match": true,
+    "webmaster_owner_verification": "awaiting user confirmation"
+  }
+}
