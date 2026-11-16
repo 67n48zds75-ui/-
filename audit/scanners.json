@@ -1,0 +1,22 @@
+[
+  {
+    "command": "gitleaks git .",
+    "status": "unavailable",
+    "reason": "gitleaks is not installed"
+  },
+  {
+    "command": "trufflehog git file://.",
+    "status": "unavailable",
+    "reason": "trufflehog is not installed"
+  },
+  {
+    "command": "osv-scanner scan source -r .",
+    "status": "unavailable",
+    "reason": "osv-scanner is not installed"
+  },
+  {
+    "command": "semgrep --config=auto --metrics=off .",
+    "status": "unavailable",
+    "reason": "semgrep is not installed"
+  }
+]
