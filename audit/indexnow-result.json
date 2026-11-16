@@ -1,0 +1,11 @@
+{
+  "time_utc": "2026-11-16T09:30:36.750348+00:00",
+  "endpoint": "https://api.indexnow.org/indexnow",
+  "submitted_url": "https://67n48zds75-ui.github.io/-/",
+  "proof_verified_http": 200,
+  "response_http": 202,
+  "response_body": "",
+  "meaning": "URL received; key verification is pending; indexing is not confirmed",
+  "google_search_console": "not connected or verified",
+  "yandex_webmaster_account": "not connected or verified"
+}
