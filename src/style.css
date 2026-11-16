@@ -2250,3 +2250,49 @@ main {
 .history small {
   overflow-wrap: anywhere;
 }
+
+.about-mathlab {
+  margin-top: 24px;
+}
+.about-mathlab h2 {
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: -0.4px;
+}
+.about-mathlab p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+  margin-top: 12px;
+  max-width: 960px;
+}
+.about-mathlab h3 {
+  margin-top: 22px;
+}
+.about-mathlab details {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.about-mathlab summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.7;
+}
+.about-mathlab summary:focus-visible {
+  outline: 3px solid #8cb6ff;
+  outline-offset: 4px;
+}
+@media (max-width: 650px) {
+  .about-mathlab h2 {
+    font-size: 17px;
+  }
+  .about-mathlab p {
+    font-size: 11px;
+  }
+  .about-mathlab h3 {
+    font-size: 14px;
+  }
+}

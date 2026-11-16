@@ -1,0 +1,6 @@
+
+> mathlab@1.0.0 check:seo
+> node scripts/check-seo.mjs
+
+SEO: HTML без JavaScript, метаданные, canonical, Schema.org, sitemap, социальная карточка и локальные ресурсы проверены.
+Важно: /-/robots.txt не является корневым robots.txt этого домена.

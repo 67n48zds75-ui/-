@@ -1,0 +1,16 @@
+
+> mathlab@1.0.0 test
+> vitest run
+
+
+ RUN  v5.1.0 /workspace/mathlab-github
+
+
+ Test Files  3 passed (3)
+      Tests  165 passed (165)
+   Start at  09:17:28
+   Duration  4.14s (tests 68%, environment 17%, import 10%, transform 6%)
+
+    Isolate  3 workers spawned · ~276ms startup each (spawn + environment, per file)
+             at least ~552ms faster with isolate: false — reuses workers across files instead of one per file
+

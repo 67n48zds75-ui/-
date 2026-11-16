@@ -49,7 +49,7 @@ describe("Рабочие сценарии интерфейса", () => {
   it("отображает главную с настоящим нулевым прогрессом", () => {
     render(<App />);
     expect(
-      screen.getByRole("heading", { name: /Время для новых открытий/ }),
+      screen.getByRole("heading", { name: /Олимпиадная математика с MathLab/ }),
     ).toBeTruthy();
     expect(screen.getByText("Всё начинается с первой задачи")).toBeTruthy();
   });
