@@ -1,0 +1,5 @@
+# Robots read /robots.txt at the domain root, not /-/robots.txt.
+# This project-level file is only effective if served at the domain root.
+User-agent: *
+Allow: /
+Sitemap: https://67n48zds75-ui.github.io/-/sitemap.xml
