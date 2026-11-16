@@ -2236,3 +2236,17 @@ main {
     transition: none !important;
   }
 }
+
+.solver-tags {
+  flex-wrap: wrap;
+}
+.variant-chip {
+  font-size: 9px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  padding: 6px 8px;
+  border-radius: 5px;
+}
+.history small {
+  overflow-wrap: anywhere;
+}

@@ -9,6 +9,7 @@ export const topics = [
 export type Topic = (typeof topics)[number];
 export type Problem = {
   id: string;
+  variantSeed?: number;
   topic: Topic;
   difficulty: number;
   title: string;

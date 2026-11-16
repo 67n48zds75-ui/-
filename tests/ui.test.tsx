@@ -11,18 +11,32 @@ import {
 } from "@testing-library/react";
 import App from "../src/App";
 import { problems } from "../src/data";
+import { variant } from "../src/variants";
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+const seed = 123456;
+const generated = (id: string) =>
+  variant(
+    problems.find((p) => p.id === id)!,
+    seed,
+  );
 beforeEach(() => {
   localStorage.clear();
+  vi.spyOn(crypto, "getRandomValues").mockImplementation(((
+    array: Uint32Array,
+  ) => {
+    array[0] = seed;
+    return array;
+  }) as typeof crypto.getRandomValues);
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 const catalog = () =>
   fireEvent.click(screen.getByRole("button", { name: /Каталог задач/ }));
@@ -60,7 +74,7 @@ describe("Рабочие сценарии интерфейса", () => {
     const view = render(<App />);
     const dialog = openByTitle("Симметрия корней");
     fireEvent.change(within(dialog).getByLabelText("Ваш ответ"), {
-      target: { value: "99" },
+      target: { value: String(Number(generated("1-1").answer) + 1) },
     });
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Проверить ответ" }),
@@ -70,7 +84,7 @@ describe("Рабочие сценарии интерфейса", () => {
       within(dialog).getByRole("button", { name: /Подсказка 1/ }),
     );
     fireEvent.change(within(dialog).getByLabelText("Ваш ответ"), {
-      target: { value: "7" },
+      target: { value: generated("1-1").answer },
     });
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Проверить ответ" }),
@@ -111,7 +125,7 @@ describe("Рабочие сценарии интерфейса", () => {
   it("проверяет несколько правильных вариантов", () => {
     render(<App />);
     const d = openByTitle("Простые среди соседей");
-    for (const n of ["11", "17", "23"])
+    for (const n of generated("3-11").answer.split("|"))
       fireEvent.click(within(d).getByLabelText(n));
     fireEvent.click(within(d).getByRole("button", { name: "Проверить ответ" }));
     expect(screen.getByRole("status").textContent).toContain("Верно!");
@@ -204,5 +218,85 @@ describe("Рабочие сценарии интерфейса", () => {
     expect(
       screen.getByText("В потоке").closest(".badge")?.textContent,
     ).toContain("Получено");
+  });
+  it("числа не меняются при неверном ответе или подсказке, но меняются при новом открытии", () => {
+    render(<App />);
+    const d = openByTitle("Симметрия корней");
+    const statement = d.querySelector(".statement")!.textContent;
+    fireEvent.change(within(d).getByLabelText("Ваш ответ"), {
+      target: { value: "-999" },
+    });
+    fireEvent.click(within(d).getByRole("button", { name: "Проверить ответ" }));
+    fireEvent.click(within(d).getByRole("button", { name: /Подсказка 1/ }));
+    expect(d.querySelector(".statement")!.textContent).toBe(statement);
+    fireEvent.click(within(d).getByRole("button", { name: "Закрыть задачу" }));
+    const next = openByTitle("Симметрия корней");
+    expect(next.querySelector(".statement")!.textContent).not.toBe(statement);
+  });
+  it("история восстанавливает прежние числа и разбор без новой записи результата", () => {
+    const view = render(<App />);
+    const d = openByTitle("Симметрия корней");
+    const statement = d.querySelector(".statement")!.textContent;
+    fireEvent.click(
+      within(d).getByRole("button", { name: "Завершить и узнать решение" }),
+    );
+    const saved = JSON.parse(localStorage.getItem("mathlab-v1")!);
+    expect(saved.results[0]).toMatchObject({
+      variantSeed: seed,
+      generatorVersion: 1,
+    });
+    view.unmount();
+    render(<App />);
+    fireEvent.click(
+      within(screen.getByRole("navigation")).getByRole("button", {
+        name: "Мой профиль",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Разбор: Симметрия корней" }),
+    );
+    const restored = screen.getByRole("dialog");
+    expect(restored.querySelector(".statement")!.textContent).toBe(statement);
+    expect(
+      within(restored).getByRole("heading", { name: "Разбор решения" }),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(restored).getByRole("button", { name: "Вернуться к истории" }),
+    );
+    expect(
+      JSON.parse(localStorage.getItem("mathlab-v1")!).results,
+    ).toHaveLength(1);
+  });
+  it("варианты из старой истории открываются с исходными числами", () => {
+    localStorage.setItem(
+      "mathlab-v1",
+      JSON.stringify({
+        version: 1,
+        theme: "light",
+        results: [
+          {
+            id: "1-1",
+            correct: true,
+            attempts: 1,
+            hints: 0,
+            date: new Date().toISOString(),
+            mode: "Тренировка",
+            session: "old",
+          },
+        ],
+      }),
+    );
+    render(<App />);
+    fireEvent.click(
+      within(screen.getByRole("navigation")).getByRole("button", {
+        name: "Мой профиль",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Разбор: Симметрия корней" }),
+    );
+    expect(
+      screen.getByRole("dialog").querySelector(".correct-answer")!.textContent,
+    ).toBe("Ответ: 7");
   });
 });

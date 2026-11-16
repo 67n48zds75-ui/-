@@ -1,5 +1,8 @@
 import { problems, topics, type Problem, type Topic } from "./data";
+import { fromResult } from "./variants";
 export type Result = {
+  variantSeed?: number;
+  generatorVersion?: 1;
   id: string;
   correct: boolean;
   attempts: number;
@@ -106,6 +109,11 @@ export function load(raw: string | null): Progress {
             r &&
             typeof r === "object" &&
             problems.some((p) => p.id === r.id) &&
+            (r.variantSeed === undefined ||
+              (r.generatorVersion === 1 &&
+                Number.isInteger(r.variantSeed) &&
+                r.variantSeed >= 0 &&
+                r.variantSeed <= 4294967295)) &&
             typeof r.correct === "boolean" &&
             Number.isInteger(r.attempts) &&
             r.attempts >= 1 &&
@@ -137,10 +145,10 @@ export function streak(results: Result[]) {
 }
 export function csv(results: Result[]) {
   return (
-    "\ufeffДата;Тема;Задача;Сложность;Результат;Попытки;Подсказки\r\n" +
+    "\ufeffДата;Тема;Задача;Сложность;Результат;Попытки;Подсказки;Вариант;Условие;Ответ\r\n" +
     results
       .map((r) => {
-        const p = problems.find((p) => p.id === r.id)!;
+        const p = fromResult(r.id, r.variantSeed);
         return [
           r.date,
           p.topic,
@@ -149,6 +157,11 @@ export function csv(results: Result[]) {
           r.correct ? "Верно" : "Ошибка",
           r.attempts,
           r.hints,
+          r.variantSeed === undefined
+            ? "Исходная задача"
+            : `v1-${r.variantSeed}`,
+          p.statement,
+          p.answer,
         ]
           .map((v) => '"' + String(v).replaceAll('"', '""') + '"')
           .join(";");

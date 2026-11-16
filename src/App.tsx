@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { freshVariant, fromResult, GENERATOR_VERSION } from "./variants";
+import { useEffect, useState, useRef } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -60,24 +61,22 @@ const icons = [Activity, Shapes, Hash, Network, Scale, Brain];
 function MathText({ text }: { text: string }) {
   return (
     <>
-      {text
-        .split(/(\$[^$]+\$)/g)
-        .map((s, i) =>
-          s.startsWith("$") ? (
-            <span
-              key={i}
-              dangerouslySetInnerHTML={{
-                __html: katex.renderToString(s.slice(1, -1), {
-                  throwOnError: false,
-                  trust: false,
-                  strict: "ignore",
-                }),
-              }}
-            />
-          ) : (
-            <span key={i}>{s}</span>
-          ),
-        )}
+      {text.split(/(\$[^$]+\$)/g).map((s, i) =>
+        s.startsWith("$") ? (
+          <span
+            key={i}
+            dangerouslySetInnerHTML={{
+              __html: katex.renderToString(s.slice(1, -1), {
+                throwOnError: false,
+                trust: false,
+                strict: "ignore",
+              }),
+            }}
+          />
+        ) : (
+          <span key={i}>{s}</span>
+        ),
+      )}
     </>
   );
 }
@@ -101,6 +100,7 @@ function initial() {
   }
 }
 export default function App() {
+  const seenVariants = useRef(new Map<string, number[]>());
   const [progress, setProgress] = useState<Progress>(initial),
     [page, setPage] = useState("Главная"),
     [filter, setFilter] = useState<Topic | "">(""),
@@ -113,6 +113,7 @@ export default function App() {
     [attempts, setAttempts] = useState(0),
     [feedback, setFeedback] = useState(""),
     [finished, setFinished] = useState(false),
+    [reviewing, setReviewing] = useState(false),
     [mode, setMode] = useState("Тренировка"),
     [session, setSession] = useState(""),
     [queue, setQueue] = useState<Problem[]>([]),
@@ -166,7 +167,8 @@ export default function App() {
         ) ?? [],
       );
     (
-      dialog?.querySelector<HTMLElement>(".answer-input") ?? focusable()[0]
+      dialog?.querySelector<HTMLElement>(".answer-input:not(:disabled)") ??
+      focusable()[0]
     )?.focus();
     const keydown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -203,7 +205,21 @@ export default function App() {
     }
   }, [seconds, deadline]);
   function open(p: Problem) {
-    setActive(p);
+    setReviewing(false);
+    const previous = [
+      ...results
+        .filter((r) => r.id === p.id && r.variantSeed !== undefined)
+        .map((r) => r.variantSeed!),
+      ...(seenVariants.current.get(p.id) ?? []),
+    ];
+    const generated = freshVariant(p, previous);
+    seenVariants.current.set(
+      p.id,
+      [...(seenVariants.current.get(p.id) ?? []), generated.variantSeed!].slice(
+        -20,
+      ),
+    );
+    setActive(generated);
     setAnswer("");
     setSelected([]);
     setHints(0);
@@ -236,6 +252,8 @@ export default function App() {
   function record(correct: boolean) {
     const r: Result = {
       id: active!.id,
+      variantSeed: active!.variantSeed,
+      generatorVersion: GENERATOR_VERSION,
       correct,
       attempts: Math.max(1, attempts + (correct ? 1 : 0)),
       hints,
@@ -265,7 +283,29 @@ export default function App() {
       );
     }
   }
+  function review(r: Result) {
+    setReviewing(true);
+    setActive(fromResult(r.id, r.variantSeed));
+    setFinished(true);
+    setMode("История решений");
+    setDeadline(0);
+    setQueue([]);
+    setSummary(false);
+    setAnswer("");
+    setSelected([]);
+    setHints(r.hints);
+    setAttempts(r.attempts);
+    setFeedback(
+      r.correct
+        ? "Этот вариант решён верно."
+        : "Сохранённый разбор завершённой попытки.",
+    );
+  }
   function next() {
+    if (reviewing) {
+      close();
+      return;
+    }
     if (queue.length) {
       if (index + 1 >= queue.length) {
         setActive(null);
@@ -349,7 +389,7 @@ export default function App() {
           .reverse()
           .slice(0, 30)
           .map((r, i) => {
-            const p = problems.find((p) => p.id === r.id)!;
+            const p = fromResult(r.id, r.variantSeed);
             return (
               <div key={i}>
                 <span className={"result-dot " + (r.correct ? "good" : "bad")}>
@@ -359,9 +399,17 @@ export default function App() {
                   <b>{p.title}</b>
                   <small>
                     {p.topic} · {r.mode} · {r.attempts} попыт. · {r.hints}{" "}
-                    подсказ.
+                    подсказ.{" "}
+                    {r.variantSeed !== undefined && ` · v1-${r.variantSeed}`}
                   </small>
                 </span>
+                <button
+                  className="text-button"
+                  onClick={() => review(r)}
+                  aria-label={`Разбор: ${p.title}`}
+                >
+                  Разбор
+                </button>
                 <span className="muted">{fmt(r.date)}</span>
               </div>
             );
@@ -907,7 +955,7 @@ export default function App() {
                         .includes(search.toLowerCase()),
                   ).length
                 }{" "}
-                задач <span>Сложность — предварительная авторская оценка</span>
+                задач <span>При открытии задачи числа меняются</span>
               </div>
               <div className="problem-grid">
                 {problems
@@ -1180,6 +1228,11 @@ export default function App() {
             </div>
             <div className="solver-body">
               <div className="solver-tags">
+                {active.variantSeed !== undefined && (
+                  <span className="variant-chip">
+                    Вариант v1-{active.variantSeed}
+                  </span>
+                )}
                 <span className="subtle-chip">{active.topic}</span>
                 <span className="muted">Сложность {active.difficulty}/10</span>
               </div>
@@ -1339,9 +1392,11 @@ export default function App() {
                     </p>
                   </div>
                   <button className="primary" onClick={next}>
-                    {queue.length && index + 1 >= queue.length
-                      ? "Итоги тренировки"
-                      : "Следующая задача"}
+                    {reviewing
+                      ? "Вернуться к истории"
+                      : queue.length && index + 1 >= queue.length
+                        ? "Итоги тренировки"
+                        : "Следующая задача"}
                     <ArrowRight size={18} />
                   </button>
                 </section>
