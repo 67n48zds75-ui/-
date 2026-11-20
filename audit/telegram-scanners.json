@@ -1,0 +1,18 @@
+[
+  {
+    "command": "gitleaks git .",
+    "status": "unavailable"
+  },
+  {
+    "command": "trufflehog git file://.",
+    "status": "unavailable"
+  },
+  {
+    "command": "osv-scanner scan source -r .",
+    "status": "unavailable"
+  },
+  {
+    "command": "semgrep --config=auto --metrics=off .",
+    "status": "unavailable"
+  }
+]

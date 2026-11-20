@@ -1,3 +1,9 @@
+import {
+  useTelegram,
+  bindTelegramBack,
+  confirmTelegramClosing,
+  telegramFeedback,
+} from "./telegram";
 import { freshVariant, fromResult, GENERATOR_VERSION } from "./variants";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -102,6 +108,7 @@ function initial() {
 }
 export default function App() {
   const seenVariants = useRef(new Map<string, number[]>());
+  const telegram = useTelegram();
   const [progress, setProgress] = useState<Progress>(initial),
     [page, setPage] = useState("Главная"),
     [filter, setFilter] = useState<Topic | "">(""),
@@ -123,7 +130,9 @@ export default function App() {
     [seconds, setSeconds] = useState(0),
     [summary, setSummary] = useState(false),
     [mobile, setMobile] = useState(false),
-    [storageError, setStorageError] = useState("");
+    [storageError, setStorageError] = useState(""),
+    [csvExport, setCsvExport] = useState<string | null>(null),
+    [csvStatus, setCsvStatus] = useState("");
   const results = progress.results,
     solved = new Set(results.filter((r) => r.correct).map((r) => r.id)).size,
     accuracy = results.length
@@ -137,7 +146,6 @@ export default function App() {
     (a, b) => mastery(results, a) - mastery(results, b),
   )[0];
   useEffect(() => {
-    document.documentElement.dataset.theme = progress.theme;
     try {
       localStorage.setItem("mathlab-v1", JSON.stringify(progress));
       setStorageError("");
@@ -148,6 +156,11 @@ export default function App() {
     }
   }, [progress]);
   useEffect(() => {
+    document.documentElement.dataset.theme = telegram.active
+      ? telegram.scheme
+      : progress.theme;
+  }, [telegram.active, telegram.scheme, progress.theme]);
+  useEffect(() => {
     if (!deadline || summary) return;
     const tick = () =>
       setSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
@@ -156,7 +169,7 @@ export default function App() {
     return () => clearInterval(t);
   }, [deadline, summary]);
   useEffect(() => {
-    if (!active && !summary) return;
+    if (!active && !summary && csvExport === null) return;
     const oldFocus = document.activeElement as HTMLElement | null;
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -173,7 +186,9 @@ export default function App() {
     )?.focus();
     const keydown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (summary) {
+        if (csvExport !== null) {
+          setCsvExport(null);
+        } else if (summary) {
           setSummary(false);
           setDeadline(0);
         } else close();
@@ -197,7 +212,44 @@ export default function App() {
       document.body.style.overflow = oldOverflow;
       oldFocus?.focus();
     };
-  }, [active, summary, attempts, hints, finished]);
+  }, [active, summary, attempts, hints, finished, csvExport]);
+  useEffect(() => {
+    if (!telegram.app) return;
+    return bindTelegramBack(
+      telegram.app,
+      csvExport !== null
+        ? () => setCsvExport(null)
+        : active
+          ? close
+          : summary
+            ? () => {
+                setSummary(false);
+                setDeadline(0);
+              }
+            : mobile
+              ? () => setMobile(false)
+              : page !== "Главная"
+                ? () => setPage("Главная")
+                : null,
+    );
+  }, [
+    telegram.app,
+    csvExport,
+    active,
+    summary,
+    mobile,
+    page,
+    attempts,
+    hints,
+    finished,
+  ]);
+  useEffect(() => {
+    if (telegram.app)
+      confirmTelegramClosing(
+        telegram.app,
+        (!!active && !finished) || (deadline > 0 && !summary),
+      );
+  }, [telegram.app, active, finished, deadline, summary]);
   useEffect(() => {
     if (deadline && seconds === 0 && Date.now() >= deadline && !summary) {
       if (active && !finished) record(false);
@@ -277,8 +329,10 @@ export default function App() {
     if (check(active, active.type === "multiple" ? selected : answer)) {
       record(true);
       setFeedback("Верно! Отличная работа.");
+      telegramFeedback(telegram.app, "success");
     } else {
       setAttempts((a) => Math.min(99, a + 1));
+      telegramFeedback(telegram.app, "error");
       setFeedback(
         "Пока неверно. Попробуйте ещё раз или воспользуйтесь подсказкой.",
       );
@@ -323,6 +377,11 @@ export default function App() {
     setDeadline(0);
   }
   function exportCsv() {
+    if (telegram.active) {
+      setCsvExport(csv(results));
+      setCsvStatus("");
+      return;
+    }
     const url = URL.createObjectURL(
       new Blob([csv(results)], { type: "text/csv;charset=utf-8" }),
     );
@@ -331,6 +390,48 @@ export default function App() {
     a.download = "mathlab-statistics.csv";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function copyCsv() {
+    const textarea = document.getElementById(
+      "csv-content",
+    ) as HTMLTextAreaElement | null;
+    try {
+      await navigator.clipboard.writeText(csvExport ?? "");
+      setCsvStatus("CSV скопирован. Вставьте его в файл или таблицу.");
+    } catch {
+      textarea?.focus();
+      textarea?.select();
+      setCsvStatus(
+        "Текст выделен. Нажмите и удерживайте его, затем выберите «Копировать».",
+      );
+    }
+  }
+  function csvFile() {
+    return new File([csvExport ?? ""], "mathlab-statistics.csv", {
+      type: "text/csv;charset=utf-8",
+    });
+  }
+  function canShareCsv() {
+    try {
+      return (
+        !!navigator.canShare?.({ files: [csvFile()] }) &&
+        typeof navigator.share === "function"
+      );
+    } catch {
+      return false;
+    }
+  }
+  async function shareCsv() {
+    try {
+      await navigator.share({
+        files: [csvFile()],
+        title: "Статистика MathLab",
+      });
+      setCsvStatus("Файл передан в меню отправки.");
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError"))
+        setCsvStatus("Не удалось открыть меню отправки. Скопируйте CSV ниже.");
+    }
   }
   const topicData = topics.map((t) => ({
     name: t,
@@ -578,8 +679,17 @@ export default function App() {
             Моё обучение <ChevronRight size={13} /> <b>{page}</b>
           </div>
           <div className="header-right">
+            {telegram.active && (
+              <button
+                className="icon-btn telegram-olympiad"
+                aria-label="Начать олимпиаду"
+                onClick={() => start("Олимпиада")}
+              >
+                <Trophy size={20} />
+              </button>
+            )}
             <span className="offline">
-              <span /> Без регистрации
+              <span /> {telegram.active ? "В Telegram" : "Без регистрации"}
             </span>
             <span className="header-line" />
             <button
@@ -1187,6 +1297,12 @@ export default function App() {
                 </div>
                 <GraduationCap size={70} strokeWidth={1} />
               </section>
+              {telegram.active && (
+                <p className="telegram-storage-note">
+                  Прогресс хранится в этом браузере Telegram. Между устройствами
+                  и обычным браузером он не синхронизируется.
+                </p>
+              )}
               <div className="section-top">
                 <h3>Ваша коллекция достижений</h3>
                 <span className="muted">
@@ -1248,6 +1364,69 @@ export default function App() {
           </footer>
         </main>
       </div>
+      {telegram.active && (
+        <nav className="telegram-tabs" aria-label="Разделы Mini App">
+          {pages.map(([name, Icon], i) => (
+            <button
+              key={name}
+              className={page === name ? "selected" : ""}
+              aria-current={page === name ? "page" : undefined}
+              onClick={() => {
+                setPage(name);
+                setMobile(false);
+              }}
+            >
+              <Icon size={21} />
+              <span>{["Главная", "Задачи", "Прогресс", "Профиль"][i]}</span>
+            </button>
+          ))}
+        </nav>
+      )}
+      {csvExport !== null && (
+        <div className="modal-backdrop">
+          <section
+            className="solver csv-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="csv-title"
+          >
+            <div className="solver-header">
+              <h2 id="csv-title">Экспорт статистики</h2>
+              <button
+                className="icon-btn"
+                aria-label="Закрыть экспорт"
+                onClick={() => setCsvExport(null)}
+              >
+                <X />
+              </button>
+            </div>
+            <div className="solver-body">
+              <p>
+                Скопируйте CSV и вставьте в таблицу или сохраните текст в файл с
+                расширением .csv.
+              </p>
+              <textarea
+                id="csv-content"
+                aria-label="Статистика в формате CSV"
+                value={csvExport}
+                readOnly
+                rows={12}
+              />
+              <div className="csv-actions">
+                <button className="primary" onClick={copyCsv}>
+                  Копировать CSV
+                </button>
+                {canShareCsv() && (
+                  <button className="secondary" onClick={shareCsv}>
+                    Поделиться файлом
+                  </button>
+                )}
+              </div>
+              {csvStatus && <p role="status">{csvStatus}</p>}
+            </div>
+          </section>
+        </div>
+      )}
       {active && (
         <div className="modal-backdrop">
           <section

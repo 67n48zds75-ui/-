@@ -1,0 +1,18 @@
+{
+  "src/main.tsx": "4376b2be0c6bbd732bfa5820e9aeeb68f28ee267b2e04989064268fcab99d9fd",
+  "src/telegram.ts": "b45065fe998e9bd295e9a74df8c02df005d9b9fc2614e84ec8f7cc37a015cd26",
+  "src/data.ts": "6957a87b9e6eaee19dd97ccdb23a1488167aa377e79ab1f6739b18d95c69da52",
+  "src/prerender.tsx": "7728639270d2c8a088cdf407dc27fda55e4c863098b587e5c4baaa2253cc0093",
+  "src/style.css": "8411f5cdc5f7fb17ac1bbc59f3df0509bb9846573bfdd9ac6fd3d87a99f80de4",
+  "src/engine.ts": "4f0b498d36881f804531af0f1e475187149f0b31ab57343dfc5c7553a9a7933d",
+  "src/App.tsx": "58e55cdceaf0e5628ae7df4ca34bb70d5d09ae942e964b95806e9265f82e6d9f",
+  "src/variants.ts": "6c8d7d30434a7d87440769389bcf07582c1790111dcf1469e1954df30ee79ec5",
+  "tests/telegram-ui.test.tsx": "8d849406be54dbace0075f11983bcbad6af2409465953e2953141b691e012a41",
+  "tests/mathlab.test.ts": "719413f4bd5652342780b17f2c52a9a96bb846046676048318615fd0c8b7ac8d",
+  "tests/ui.test.tsx": "b5f3a5b930502a2fe45f8898997dc2b70987264b8e01e11a70c31e178790a4f5",
+  "tests/variants.test.ts": "a5488019f488b00dc52040f466482e3d78857d58dee0eeb4e632b005c9fcf2f6",
+  "tests/telegram.test.ts": "8ab78550b86fb81802b8e64f8697ca203f7c9bf3eeb2a392fa9ae6a3464eac30",
+  "index.html": "aaa5ed3a2ff15e111ce43a418ca7f64254315dddf8c5858880e1f89ef752975e",
+  "package.json": "b758047c2a879d901401f91af9a2cb13abb923bb37a7bb070f8147784b150f63",
+  "package-lock.json": "72d84d5c5088a6e640e280edac9895b6570dd8b5762f592a8351546cee24da52"
+}
